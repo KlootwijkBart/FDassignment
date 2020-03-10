@@ -4,13 +4,13 @@
 
 % Stationary flight condition
 
-hp0    = 1000;      	  % pressure altitude in the stationary flight condition [m]
-V0     = 100;            % true airspeed in the stationary flight condition [m/sec]
-alpha0 = 0;       	  % angle of attack in the stationary flight condition [rad]
-th0    = 0;       	  % pitch angle in the stationary flight condition [rad]
+hp0    = 1;      	  % pressure altitude in the stationary flight condition [m]
+V0     = 1;          % true airspeed in the stationary flight condition [m/sec]
+alpha0 = 1;       	  % angle of attack in the stationary flight condition [rad]
+th0    = 1;       	  % pitch angle in the stationary flight condition [rad]
 
 % Aircraft mass
-m      = 10000;         	  % mass [kg]
+m      = 1;         	  % mass [kg]
 
 % aerodynamic properties
 e      = 0.8;            % Oswald factor [ ]
@@ -19,7 +19,7 @@ CLa    = 5.084;            % Slope of CL-alpha curve [ ]
 
 % Longitudinal stability
 Cma    = -0.5626;            % longitudinal stabilty [ ]
-Cmde   = -1.1642;            % elevator effectiveness [ ]
+Cmde   = -1.1642;           % elevator effectiveness [ ]
 
 % Aircraft geometry
 
@@ -27,13 +27,13 @@ S      = 30.00;	          % wing area [m^2]
 Sh     = 0.2*S;           % stabiliser area [m^2]
 Sh_S   = Sh/S;	          % [ ]
 lh     = 0.71*5.968;      % tail length [m]
-c      = 2.0569;	  % mean aerodynamic cord [m]
+c      = 2.0569;	      % mean aerodynamic cord [m]
 lh_c   = lh/c;	          % [ ]
-b      = 15.911;	  % wing span [m]
+b      = 15.911;	      % wing span [m]
 bh     = 5.791;	          % stabilser span [m]
 A      = b^2/S;           % wing aspect ratio [ ]
 Ah     = bh^2/Sh;         % stabilser aspect ratio [ ]
-Vh_V   = 1;		  % [ ]
+Vh_V   = 1;		          % [ ]
 ih     = -2*pi/180;       % stabiliser angle of incidence [rad]
 
 % Constant values concerning atmosphere and gravity
@@ -45,7 +45,7 @@ R      = 287.05;          % specific gas constant [m^2/sec^2K]
 g      = 9.81;            % [m/sec^2] (gravity constant)
 
 rho    = rho0*((1+(lambda*hp0/Temp0)))^(-((g/(lambda*R))+1));   % [kg/m^3]  (air density)
-W      = m*g;				                        % [N]       (aircraft weight)
+W      = m*g;				                                    % [N]       (aircraft weight)
 
 % Constant values concerning aircraft inertia
 
@@ -107,4 +107,8 @@ Cnp    =  -0.0602;
 Cnr    =  -0.2061;
 Cnda   =  -0.0120;
 Cndr   =  -0.0939;
+
+
+
+
 
