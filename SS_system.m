@@ -48,6 +48,7 @@ C_3a = [ CYda  CYdr  ;...
 Aa = -1*inv(C_1a)*C_2a;
 Ba = -1*inv(C_1a)*C_3a;
 
+
 Ca = eye(size(Aa));
 Da = [0];
 
@@ -56,3 +57,4 @@ sysa = ss(Aa,Ba,Ca,Da);
 [y,t] = step(sysa,10);
 plot(t,y(:,:,1))
 legend('Sideslip','Bank angle', 'Roll Rate','Yaw Rate')
+
