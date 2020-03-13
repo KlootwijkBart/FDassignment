@@ -4,13 +4,13 @@
 
 % Stationary flight condition
 
-hp0    = 1;      	  % pressure altitude in the stationary flight condition [m]
-V0     = 1;          % true airspeed in the stationary flight condition [m/sec]
-alpha0 = 1;       	  % angle of attack in the stationary flight condition [rad]
-th0    = 1;       	  % pitch angle in the stationary flight condition [rad]
+hp0    = 5000;      	 % pressure altitude in the stationary flight condition [m]
+V0     = 87;             % true airspeed in the stationary flight condition [m/sec]
+alpha0 = 2.6*pi/180;     % angle of attack in the stationary flight condition [rad]
+th0    = 3*pi/180;       % pitch angle in the stationary flight condition [rad]
 
 % Aircraft mass
-m      = 1;         	  % mass [kg]
+m      = 4200;         	  % mass [kg]
 
 % aerodynamic properties
 e      = 0.8;            % Oswald factor [ ]
