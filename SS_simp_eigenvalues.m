@@ -33,3 +33,30 @@ As_simp1 = -1*inv(C_1s_simp1)*C_2s_simp1;   % C_1s_simp is not invertible :(
 % eig(As_simp1)
 
 % Aperiodic roll eigenvalues
+
+lambda_a1 = Clp/(4*mub*KX2*b/V0);
+
+% Dutch roll eigenvalues
+
+C_1a_simp = [ -2*mub*b/V0             0            ;...
+                   0        -2*mub*KZ2*b*b/(V0*V0) ];
+C_2a_simp = [ CYb -4*mub*b/(2*V0) ;...
+              Cnb   Cnr*b/(2*V0)  ];
+
+Aa_simp = -1*inv(C_1a_simp)*C_2a_simp;
+el_a1 = Aa_simp(1,1);
+el_b1 = Aa_simp(1,2);
+el_c1 = Aa_simp(2,1);
+el_d1 = Aa_simp(2,2);
+Discr1 = sqrt((-el_a1-el_d1)^2-4*(el_a1*el_d1-el_b1*el_c1));
+
+lambda_a2 = ((el_a1+el_d1)+Discr1)/2;
+lambda_a3 = ((el_a1+el_d1)-Discr1)/2;
+
+% Spiral motion eigenvalue
+
+C_1a_simp1 = [ 0     0     0 0 ;...
+               0 -0.5*b/V0 0 0 ;...
+               0     0     0 0 ;...
+               0     0     0 0 ];
+C_2a_simp1 = [ 
