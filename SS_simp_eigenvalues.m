@@ -9,6 +9,7 @@ C_2s_simp = [ CZa (CZq+2*muc)*c/V0   ;...
           
 As_simp = -1*inv(C_1s_simp)*C_2s_simp;
 
+%% 
 el_a = As_simp(1,1);
 el_b = As_simp(1,2);
 el_c = As_simp(2,1);
@@ -16,6 +17,7 @@ el_d = As_simp(2,2);
 Discr = sqrt((-el_a-el_d)^2-4*(el_a*el_d-el_b*el_c));
 lambda_1 = ((el_a+el_d)+Discr)/2;
 lambda_2 = ((el_a+el_d)-Discr)/2;
+%%
 
 % Phugoid eigenvalues (lambda_3,4)
 
@@ -59,4 +61,3 @@ C_1a_simp1 = [ 0     0     0 0 ;...
                0 -0.5*b/V0 0 0 ;...
                0     0     0 0 ;...
                0     0     0 0 ];
-C_2a_simp1 = [ 
