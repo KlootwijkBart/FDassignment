@@ -6,4 +6,5 @@ sys = ss(Aa,Ba,C,D);
 [y,t] = step(sys, 10);
 
 clf();
-plot(t,y(:,3,1));
+% y: index 1=tijd, index2=state variable, index3=input variable 
+plot(t,y(:,:,2));
