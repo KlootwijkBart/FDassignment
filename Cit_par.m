@@ -5,17 +5,17 @@
 % Stationary flight condition
 
 hp0    = 5000;      	 % pressure altitude in the stationary flight condition [m]
-V0     = 87;             % true airspeed in the stationary flight condition [m/sec]
-alpha0 = 2.6*pi/180;     % angle of attack in the stationary flight condition [rad]
-th0    = 3*pi/180;       % pitch angle in the stationary flight condition [rad]
+V0     = 76.87;          % true airspeed in the stationary flight condition [m/sec]
+alpha0 = 2.6 * pi/180;   % angle of attack in the stationary flight condition [rad]
+th0    = 3 * pi/180;     % pitch angle in the stationary flight condition [rad]
 
-% Aircraft mass
-m      = 4200;         	  % mass [kg]
+% Initial aircraft mass
+m0      = 5000;         	 % mass [kg]
 
 % aerodynamic properties
-e      = 0.8;            % Oswald factor [ ]
-CD0    = 0.04;          % Zero lift drag coefficient [ ]
-CLa    = 5.084;            % Slope of CL-alpha curve [ ]
+e      = 0.852874;       % Oswald factor [ ]
+CD0    = 0.031389;       % Zero lift drag coefficient [ ]
+CLa    = 4.97;           % Slope of CL-alpha curve [ ]
 
 % Longitudinal stability
 Cma    = -0.5626;            % longitudinal stabilty [ ]
@@ -43,6 +43,9 @@ lambda = -0.0065;         % temperature gradient in ISA [K/m]
 Temp0  = 288.15;          % temperature at sea level in ISA [K]
 R      = 287.05;          % specific gas constant [m^2/sec^2K]
 g      = 9.81;            % [m/sec^2] (gravity constant)
+gamma  = 1.4;             % ratio of specific heats for air [-]
+P0     = 101325;          % ISA sea-level pressure [Pa]      
+
 
 rho    = rho0*((1+(lambda*hp0/Temp0)))^(-((g/(lambda*R))+1));   % [kg/m^3]  (air density)
 W      = m*g;				                                    % [N]       (aircraft weight)
@@ -71,7 +74,7 @@ CD = CD0 + (CLa*alpha0)^2/(pi*A*e);  % Drag coefficient [ ]
 % Stabiblity derivatives
 
 CX0    = W*sin(th0)/(0.5*rho*V0^2*S);
-CXu    = -0.02792;
+CXu    = -0.095;
 CXa    = -0.47966;
 CXadot = +0.08330;
 CXq    = -0.28170;
