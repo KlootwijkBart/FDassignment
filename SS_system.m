@@ -1,6 +1,6 @@
 % Load data 
-load Cit_par_data.mat              % parameters provided
 load FTISxprt-20200309_flight3.mat % data from test flight
+
 
 %% Flight data processing
 % =========================================================================
@@ -9,12 +9,15 @@ load FTISxprt-20200309_flight3.mat % data from test flight
 
 % Flight Data
 FD_t   = flightdata.time.data;                 % time [s]
-FD_cas = flightdata.Dadc1_cas.data*0.51444444; % calibrated air speed [kts]
 FD_h   = flightdata.Dadc1_alt.data*0.3048;     % altitude [m]
+FD_cas = flightdata.Dadc1_cas.data*0.51444444; % calibrated air speed [m/s]
+FD_tas = flightdata.Dadc1_tas.data*0.51444444; % true air speed [m/s]  
 FD_TAT = flightdata.Dadc1_tat.data+273.15;     % total air temperature [K]
 
-% Euler angles
+% Angle of attack
 FD_aoa = flightdata.vane_AOA.data;             % angle of attack [deg]
+
+% Euler angles
 FD_th  = flightdata.Ahrs1_Pitch.data;          % pitch angle [deg]
 FD_phi = flightdata.Ahrs1_Roll.data;           % roll angle [deg]  
    
@@ -32,25 +35,85 @@ FD_dr  = flightdata.delta_r.data;              % rudder deflection [deg]
 FD_fe  = flightdata.column_fe.data;            % stick force [N]
 FD_Se  = flightdata.column_Se.data;            % stick deflection [deg]
 
+% Fuel used
+FD_FUl = flightdata.lh_engine_FU.data*0.45359237;  % fuel used by left engine [kg]
+FD_FUr = flightdata.rh_engine_FU.data*0.45359237;  % fuel used by right engine [kg]
+
+
+%% Compute parameters
+
+% Constant values concerning atmosphere and gravity
+
+rho0   = 1.2250;          % air density at sea level [kg/m^3] 
+lambda = -0.0065;         % temperature gradient in ISA [K/m]
+Temp0  = 288.15;          % temperature at sea level in ISA [K]
+R      = 287.05;          % specific gas constant [m^2/sec^2K]
+g      = 9.81;            % [m/sec^2] (gravity constant)
+gamma  = 1.4;             % ratio of specific heats for air [-]
+P0     = rho0*R*Temp0;    % ISA sea-level pressure [Pa]
+
 % Prepare tables
-p_tab=[]; mach_tab=[]; SAT_tab=[]; Veq_tab=[]; Sos_tab=[]; 
+FD_p=[]; FD_rho=[]; FD_eas=[]; FD_mass=[]; 
+
+% Run
+for i = 1:length(FD_t)
+     
+% compute ISA values    
+p   = P0*(1+(lambda*FD_h(i)/Temp0))^-(g/(lambda*R)); % static pressure [Pa]
+T   = Temp0 + (lambda*FD_h(i));           % equivalent air temperature [K]
+rho = p/(R*T);                            % air density [kg/m^3]
+
+% compute equivalent airspeed from true airspeed and densities
+eas = FD_tas(i)*(rho/rho0)^0.5;           % [m/s]
+
+% compute instantaneous mass 
+m = m0 - FD_FUr(i) - FD_FUl(i);           % ramp mass minus fuel used [kg]
+
+% append values to tables
+FD_p    = [FD_p;p];
+FD_rho  = [FD_rho;rho];
+FD_eas  = [FD_eas;eas];
+FD_mass = [FD_mass;m];
+
+end
+
+%% Stationary flight condition
+
+% indices for start and end of different eigenmodes, in the order shown
+% below
+idxstart = [30311,32380,33441,34661,35131,37261];
+idxend   = [32011,32410,33621,35011,35511,39411];
+
+% ask user input 
+eigenmode = input(['',...
+                   '\n1: Phugoid',...
+                   '\n2: Short period',...
+                   '\n3: A-periodic roll',...
+                   '\n4: Dutch roll',...
+                   '\n5: Dutch roll damped',...
+                   '\n6: Spiral',...
+                   '\n',...
+                   '\nWhich eigenmode is to be simulated? ']);
+
+idxstart = idxstart(eigenmode);
+idxend   = idxend(eigenmode);
+
+% initial stationary flight conditions @ start of eigenmotion
+hp0    = FD_h(idxstart);    % pressure altitude in the stationary flight condition [m]
+V0     = FD_eas(idxstart);  % equivalent airspeed in the stationary flight condition [m/sec]
+alpha0 = FD_aoa(idxstart)*pi/180;  % angle of attack in the stationary flight condition [rad]
+th0    = FD_th(idxstart)*pi/180;   % pitch angle in the stationary flight condition [rad]
 
 
 %% Cit_par
 
 % Citation 550 - Linear simulation
 
-% xcg = 0.25*c
-
-% Stationary flight condition
-
-hp0    = 5000;      	 % pressure altitude in the stationary flight condition [m]
-V0     = 76.87;          % true airspeed in the stationary flight condition [m/sec]
-alpha0 = 2.6 * pi/180;   % angle of attack in the stationary flight condition [rad]
-th0    = 3 * pi/180;     % pitch angle in the stationary flight condition [rad]
-
 % Initial aircraft mass
-m0      = 5000;         	 % mass [kg]
+m0     = 60500/9.81;     % ramp mass [kg]
+
+% standard engine fuel flow for BOTH engines
+mdot   = 2*0.048;        % [kg/sec] 
 
 % aerodynamic properties
 e      = 0.852874;       % Oswald factor [ ]
@@ -58,8 +121,8 @@ CD0    = 0.031389;       % Zero lift drag coefficient [ ]
 CLa    = 4.97;           % Slope of CL-alpha curve [ ]
 
 % Longitudinal stability
-Cma    = -0.5626;            % longitudinal stabilty [ ]
-Cmde   = -1.1642;           % elevator effectiveness [ ]
+Cma    = -0.5626;        % longitudinal stabilty [ ]
+Cmde   = -1.1642;        % elevator effectiveness [ ]
 
 % Aircraft geometry
 
@@ -85,7 +148,6 @@ R      = 287.05;          % specific gas constant [m^2/sec^2K]
 g      = 9.81;            % [m/sec^2] (gravity constant)
 gamma  = 1.4;             % ratio of specific heats for air [-]
 P0     = 101325;          % ISA sea-level pressure [Pa]      
-
 
 rho    = rho0*((1+(lambda*hp0/Temp0)))^(-((g/(lambda*R))+1));   % [kg/m^3]  (air density)
 W      = m*g;				                                    % [N]       (aircraft weight)
@@ -151,38 +213,8 @@ Cnr    =  -0.2061;
 Cnda   =  -0.0120;
 Cndr   =  -0.0939;
 
-
-%% Compute parameters
-
-for i = 1:length(FD_t)
-    
-% compute pressure    
-p = P0*(1+(lambda*FD_h(i)/Temp0))^-(g/(lambda*R)); % static pressure [Pa]
-
-% compute mach
-a = (2/(gamma-1));
-b = ((P0)/p);
-c = (1 + (((gamma-1)*rho0*FD_cas(i)^2)/(2*gamma*P0)));
-d = (gamma/(gamma-1));
-e = (gamma-1)/gamma;
-mach = ((((((c^d)-1)*b+1)^e)-1)*a)^0.5;   % mach number [-]
-
-% compute other values
-SAT = FD_TAT(i)/(1+((gamma-1)/2)*mach^2); % static air temperature [K]
-Sos=(gamma*R*SAT)^0.5;                    % speed of sound [m/s] 
-Vt=mach*Sos;                              % true airspeed [m/s]
-rho=p/(R*SAT);                            % local air density [kg/m^3]
-Veq=Vt*(rho/rho0)^0.5;                    % equivalent airspeed [m/s]
-Tisa=Temp0 + (lambda*FD_h(i));            % equivalent air temperature [K]
-
-% append values to tables
-p_tab    = [p_tab;p];
-mach_tab = [mach_tab;mach];
-Veq_tab  = [Veq_tab;Veq];
-SAT_tab  = [SAT_tab;SAT];
-Sos_tab  = [Sos_tab;Sos];
-
-end
+clf()
+plot(FD_t,FD_h)
 
 
 %{ 
@@ -198,7 +230,9 @@ Spiral             37261:39411
 
 %}
 
-V0 = Veq_tab(32380);
+
+%% Instant
+% V0 = Veq_tab(32380);
 
 
 %% Define State Space Model
@@ -279,8 +313,8 @@ Spiral             37261:39411
 
 %}
 
-u_de = FD_de(30311:32011); % negative impulse input in elevator deflection
-Veq  = Veq_tab(30311:32011);
+u_de = FD_de(idxstart:idxend) ; % negative impulse input in elevator deflection
+Veq  = FD_eas(idxstart:idxend);
 n = length(u_de);
 t = linspace(0,(0.1*n),n);
 [y,t] = lsim(syss,u_de,t);
@@ -290,17 +324,18 @@ tiledlayout(4,1)
 nexttile
 plot(t,V0+y(:,1,1)/V0,t,Veq)  % plot speed V 
 title('V [m/s]')
+legend()
 
 nexttile
-plot(t,FD_aoa(1)+y(:,2,1)*180/pi) % plot AoA alpha
+plot(t,alpha0+y(:,2,1)) % plot AoA alpha
 title('Angle of attack [deg]')
 
 nexttile
-plot(t,FD_th(1)+y(:,3,1)*180/pi)    % plot pitch angle theta
+plot(t,th0+y(:,3,1))    % plot pitch angle theta
 title('Pitch angle [deg]')
 
 nexttile
-plot(t,FD_q(1)+y(:,4,1)*180/pi)        % plot pitch rate q
+plot(t,FD_q(1)+y(:,4,1))        % plot pitch rate q
 title('Pitch rate [deg/s]')
 
 
