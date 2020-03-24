@@ -1,6 +1,6 @@
 % Load data 
 load FTISxprt-20200309_flight3.mat % data from test flight
-
+% load Cit_par_data.mat
 
 %% Flight data processing
 % =========================================================================
@@ -41,6 +41,9 @@ FD_FUr = flightdata.rh_engine_FU.data*0.45359237;  % fuel used by right engine [
 
 
 %% Compute parameters
+
+% Initial aircraft mass
+m0     = 0.45359237*14935.3;     % ramp mass [kg]
 
 % Constant values concerning atmosphere and gravity
 
@@ -84,16 +87,18 @@ end
 idxstart = [30311,32380,33441,34661,35131,37261];
 idxend   = [32011,32410,33621,35011,35511,39411];
 
-% ask user input 
-eigenmode = input(['',...
-                   '\n1: Phugoid',...
-                   '\n2: Short period',...
-                   '\n3: A-periodic roll',...
-                   '\n4: Dutch roll',...
-                   '\n5: Dutch roll damped',...
-                   '\n6: Spiral',...
-                   '\n',...
-                   '\nWhich eigenmode is to be simulated? ']);
+% % ask user input 
+% eigenmode = input(['',...
+%                    '\n1: Phugoid',...
+%                    '\n2: Short period',...
+%                    '\n3: A-periodic roll',...
+%                    '\n4: Dutch roll',...
+%                    '\n5: Dutch roll damped',...
+%                    '\n6: Spiral',...
+%                    '\n',...
+%                    '\nWhich eigenmode is to be simulated? ']);
+
+eigenmode = 1;
 
 idxstart = idxstart(eigenmode);
 idxend   = idxend(eigenmode);
@@ -105,20 +110,17 @@ alpha0 = FD_aoa(idxstart)*pi/180;  % angle of attack in the stationary flight co
 th0    = FD_th(idxstart)*pi/180;   % pitch angle in the stationary flight condition [rad]
 
 
-%% Cit_par
+%% Cessna Citation parameters
 
 % Citation 550 - Linear simulation
-
-% Initial aircraft mass
-m0     = 60500/9.81;     % ramp mass [kg]
 
 % standard engine fuel flow for BOTH engines
 mdot   = 2*0.048;        % [kg/sec] 
 
 % aerodynamic properties
-e      = 0.852874;       % Oswald factor [ ]
+e      = 0.72;       % Oswald factor [ ]
 CD0    = 0.031389;       % Zero lift drag coefficient [ ]
-CLa    = 4.97;           % Slope of CL-alpha curve [ ]
+CLa    = 4.5;           % Slope of CL-alpha curve [ ]
 
 % Longitudinal stability
 Cma    = -0.5626;        % longitudinal stabilty [ ]
@@ -213,10 +215,6 @@ Cnr    =  -0.2061;
 Cnda   =  -0.0120;
 Cndr   =  -0.0939;
 
-clf()
-plot(FD_t,FD_h)
-
-
 %{ 
 
 Index range of demonstrated eigenmotions: 
@@ -231,10 +229,6 @@ Spiral             37261:39411
 %}
 
 
-%% Instant
-% V0 = Veq_tab(32380);
-
-
 %% Define State Space Model
 
 % =========================================================================
@@ -246,7 +240,7 @@ C_1s = [ -2*muc*c/(V0*V0)         0            0             0             ;...
                 0                 0          -c/V0           0             ;...
                 0            Cmadot*c/V0       0   -2*muc*KY2*c*c/(V0*V0)  ];
 
-C_2s = [ CXu/V0   CXa   CZ0       CXa*c/V0      ;...
+C_2s = [ CXu/V0   CXa   CZ0       CXq*c/V0      ;...
          CZu/V0   CZa  -CX0  (c/V0)*(CZq+2*muc) ;...
             0      0     0          c/V0        ;...
          Cmu/V0   Cma    0        Cmq*c/V0      ];
@@ -272,8 +266,8 @@ syss = ss(As,Bs,Cs,Ds);
 
 C_1a = [ (CYbdot-2*mub)*b/V0     0              0                     0            ;...
                 0            -0.5*b/V0          0                     0            ;...
-                0                0      -2*mub*KX2*b^2/V0^2    2*mub*KXZ*b^2/V0^2  ;...
-           Cnbdot*b/V0           0       2*mub*KXZ*b^2/V0^2   -2*mub*KZ2*b^2/V0^2  ];
+                0                0      -2*mub*KX2*(b/V0)^2    2*mub*KXZ*(b/V0)^2  ;...
+           Cnbdot*b/V0           0       2*mub*KXZ*(b/V0)^2   -2*mub*KZ2*(b/V0)^2  ];
 
 C_2a = [ CYb     CL   CYp*b/(2*V0)  (CYr-4*mub)*b/(2*V0) ;...
           0       0     b/(2*V0)              0          ;...
@@ -295,7 +289,7 @@ Da = [0];
 sysa = ss(Aa,Ba,Ca,Da);
 
 
-%% Plot Results
+%% Plot Definitions
 % =========================================================================
 % PLOT
 % =========================================================================
@@ -313,29 +307,175 @@ Spiral             37261:39411
 
 %}
 
-u_de = FD_de(idxstart:idxend) ; % negative impulse input in elevator deflection
+set(0, 'DefaultAxesTickLabelInterpreter', 'latex')
+
+clf();
+% f1 = figure;
+% f2 = figure;
+
+
+%% Plot simulated time response of syss to step input of -1.5 [deg] elevator deflection
+
+% N = 36; % simulation time in seconds = (N-1)/10
+% u_de = (-1.5*pi/180)*ones(N,1); % step input of -1.5 [deg] elevator deflection
+% t = linspace(0,(N-1)/10,N); % create time vector
+% [y,t] = lsim(syss,u_de,t);  % simulate time response of syss to input u_de
+% 
+% % process results from state-space model for plotting.
+% % add initial conditions V0, alpha 0 and th0 because state vector
+% % values are deviation values
+% res_V   = [V0 + y(:,1,1)];
+% res_aoa = [alpha0 + y(:,2,1)*180/pi]; % angles in deg
+% res_th  = [th0 + y(:,3,1)*180/pi];
+% res_q   = y(:,4,1)*180/pi;
+% 
+% % plot...
+% 
+% xlimits = [0 N-1]/10; 
+% 
+% figure(f1)
+% tiledlayout(2,1)
+% nexttile % subplot 1
+% plot(t,res_V)  
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('V [m/s]')
+% 
+% nexttile % subplot 2
+% plot(t,res_aoa) 
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('\alpha [deg]')
+% 
+% figure(f2)
+% tiledlayout(2,1)
+% nexttile % subplot 1
+% plot(t,res_th)   
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('\theta [deg]'); ylim([-20 20])
+% 
+% nexttile % subplot 2
+% plot(t,res_q)   
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('q [deg/s]')
+
+
+%% Plot SS model response to pulse input in aileron deflection (duration 1 sec)
+ 
+% PLOTS SHOW BOTH A-PERIODIC ROLL, AND SPIRAL MODE
+
+% N = 101; % simulation time in seconds = (N-1)/10
+% u_da = [(2.6*pi/180)*ones(10,1);zeros(N-10,1)]; % aileron pulse shaped input during 1 sec
+% u_dr = zeros(N,1); % no rudder input
+% u = [u_da,u_dr];
+% t = linspace(0,(N-1)/10,N); % create time vector
+% [y,t] = lsim(sysa,u,t); % simulate time response of sysa to input u
+% 
+% % % process results from state-space model for plotting
+% res_beta = y(:,1,1)*180/pi;
+% res_phi  = y(:,2,1)*180/pi;
+% res_p    = y(:,3,1)*180/pi;
+% res_r    = y(:,4,1)*180/pi;
+% 
+% % plot...
+% 
+% xlimits = [0 N-1]/10; 
+% 
+% figure(f1)
+% tiledlayout(2,1)
+% nexttile % subplot 1
+% plot(t,res_beta)  
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('\beta [deg]')
+% 
+% nexttile % subplot 2
+% plot(t,res_phi) 
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('\phi [deg]'); ylim([-25 1])
+% 
+% figure(f2)
+% tiledlayout(2,1)
+% nexttile % subplot 1
+% plot(t,res_p)  
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('p [deg/s]'); ylim([-15 1])
+% 
+% nexttile % subplot 2
+% plot(t,res_r)   
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('r [deg/s]'); ylim([-4.5 0.5])
+
+
+%% Plot SS model response to pulse input in rudder deflection (duration 1 sec)
+
+% % PLOTS SHOW DUTCH ROLL MOTION
+% 
+% N = 151; % simulation time in seconds = (N-1)/10
+% u_da = [zeros(N,1)]; % no aileron input
+% u_dr = [(-8*pi/180)*ones(10,1);zeros(N-10,1)]; % rudder pulse shaped input during 1 sec
+% u = [u_da,u_dr]; % create input vector
+% t = linspace(0,(N-1)/10,N); % create time vector
+% [y,t] = lsim(sysa,u,t); % simulate time response of sysa to input u
+% 
+% % % process results from state-space model for plotting
+% res_beta = y(:,1,1)*180/pi;
+% res_phi  = y(:,2,1)*180/pi;
+% res_p    = y(:,3,1)*180/pi;
+% res_r    = y(:,4,1)*180/pi;
+% 
+% % plot...
+% 
+% xlimits = [0 N-1]/10; 
+% 
+% figure(f1)
+% tiledlayout(2,1)
+% nexttile % subplot 1
+% plot(t,res_beta)  
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('\beta [deg]'); ylim([-10 10])
+% 
+% nexttile % subplot 2
+% plot(t,res_phi) 
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('\phi [deg]'); ylim([-1 20])
+% 
+% figure(f2)
+% tiledlayout(2,1)
+% nexttile % subplot 1
+% plot(t,res_p)  
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('p [deg/s]'); ylim([-10 15])
+% 
+% nexttile % subplot 2
+% plot(t,res_r)   
+% grid on
+% xlabel('t [s]'); xlim(xlimits)
+% ylabel('r [deg/s]'); ylim([-11 11])
+
+
+%% 
+
+% define arrays to plot
+u_de = FD_de(idxstart:idxend) ; 
 Veq  = FD_eas(idxstart:idxend);
 n = length(u_de);
 t = linspace(0,(0.1*n),n);
 [y,t] = lsim(syss,u_de,t);
-clf();
-tiledlayout(4,1)
 
-nexttile
-plot(t,V0+y(:,1,1)/V0,t,Veq)  % plot speed V 
-title('V [m/s]')
-legend()
+xlimits = [0 length(u_de)/10];
 
-nexttile
-plot(t,alpha0+y(:,2,1)) % plot AoA alpha
-title('Angle of attack [deg]')
-
-nexttile
-plot(t,th0+y(:,3,1))    % plot pitch angle theta
-title('Pitch angle [deg]')
-
-nexttile
-plot(t,FD_q(1)+y(:,4,1))        % plot pitch rate q
-title('Pitch rate [deg/s]')
-
-
+% plot speed
+plot(t,V0+y(:,1,1)/V0, t,Veq); 
+grid on
+xlabel('t [s]'); xlim(xlimits)
+ylabel('V_{EAS} [m/s]')
+legend('Simulation Results', 'Testflight Results')
