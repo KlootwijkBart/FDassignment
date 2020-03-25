@@ -36,8 +36,8 @@ FD_fe  = flightdata.column_fe.data;            % stick force [N]
 % below
 % 1: Phugoid, 2: Short period, 3: A-periodic roll, 4: Dutch roll, 5: Dutch
 % roll damped, 6: Spiral
-idxstart = [32430,36350,35500,37210,37670,39200]-89;
-idxend   = [34560,36380,35621,37380,37711,39411]-89;
+idxstart = [32430,36340,35507,37210,37670,39200]-89;
+idxend   = [34560,36480,35621,37380,37711,39411]-89;
 
 % ask user input 
 eigenmode = input(['',...
@@ -55,9 +55,11 @@ if eigenmode == 1
 idxstart = idxstart(eigenmode);
 idxend   = idxend(eigenmode);
 
-V0 = FD_eas(idxstart);
 t_array = FD_t(idxstart:idxend);
 q_array = FD_th(idxstart:idxend);
+
+clf()
+plot(t_array, q_array)
 
 % Find peaks
 [q_peaks_max, t_peaks_max] = findpeaks(q_array);
@@ -100,14 +102,14 @@ end
 % Calculation period & imaginary part eta
 Period = mean(Period_array);
 Period = Period(1)*2;
-eta = 2*pi*c/(Period*V0);
+eta = 2*pi/(Period);
 
 % Logarithmic decrement delta & real part xi
 delta = mean(delta_array);
 delta = log(delta(1));
-xi = delta*c/(V0*Period);
+xi = delta/(Period);
 
-lambda = xi + eta*1i;
+lambda = xi + eta*1i
 end
 
 %% Short period
@@ -133,6 +135,21 @@ if eigenmode == 3
     
     clf()
     plot(t_array, p_array)
+    
+    p_peaks = findpeaks(p_array);
+    p_0 = p_peaks(1);
+    p_first = p_array(1);
+    p_halfamp = (p_0-p_first)/2 + p_first;
+    
+    p = p_first;
+    i = 1;
+    while p < p_halfamp
+        i = i+1;
+        p = p_array(i);
+    end
+    
+    T_half = t_array(i)-t_array(1);
+    lambda = log(0.5)/(T_half)
 end
 
 %% Dutch roll
@@ -185,14 +202,14 @@ if eigenmode == 4
     % Calculation period & imaginary part eta
     Period = mean(Period_array);
     Period = Period(1)*2;
-    eta = 2*pi*c/(Period*V0);
+    eta = 2*pi/(Period);
 
     % Logarithmic decrement delta & real part xi
     delta = mean(delta_array);
     delta = log(delta(1));
-    xi = delta*c/(V0*Period);
+    xi = delta/(Period);
 
-    lambda = xi + eta*1i; 
+    lambda = xi + eta*1i
 end
 
 %% Spiral
@@ -201,58 +218,41 @@ if eigenmode == 6
     idxend   = idxend(eigenmode);
     
     t_array = FD_t(idxstart:idxend);
-    r_array = FD_p(idxstart:idxend);
+    p_array = FD_p(idxstart:idxend);
     
     clf()
-    plot(t_array, r_array)
+    plot(t_array, p_array)
     
     % Find peaks
-    [r_peaks_max, t_peaks_max] = findpeaks(r_array);
-    [r_peaks_min, t_peaks_min] = findpeaks(-1*r_array);
-    r_peaks_min = -1*r_peaks_min;
+    [p_peaks_max, t_peaks_max] = findpeaks(p_array);
+    [p_peaks_min, t_peaks_min] = findpeaks(-1*p_array);
+    p_peaks_min = -1*p_peaks_min;
 
     % Find middle of oscillation q_zero
-    r_diff = r_peaks_max(1) - interp1(t_peaks_min, r_peaks_min, t_peaks_max(1), 'linear');
-    r_zero = r_peaks_max(1) - r_diff/2;
+    p_diff = p_peaks_max(1) - interp1(t_peaks_max(1:2), p_peaks_max(1:2), t_peaks_min(1), 'linear');
+    p_zero = p_peaks_max(1) - p_diff/2;
 
     % Normalize peaks around q_zero
-    r_peaks_max = r_peaks_max - r_zero;
-    r_peaks_min = r_peaks_min - r_zero;
-    r_peaks_min = -1*r_peaks_min; % to get array of positive amplitudes
+    p_peaks_max = p_peaks_max - p_zero;
+    p_peaks_min = p_peaks_min - p_zero;
+    p_peaks_min = -1*p_peaks_min; % to get array of positive amplitudes
 
     % Concatenate and sort peaks to make array of amplitudes
-    r_peaks = cat(1, r_peaks_max, r_peaks_min);
+    p_peaks = cat(1, p_peaks_max, p_peaks_min);
     t_peaks = cat(1, t_peaks_max, t_peaks_min);
 
     [t_peaks, sortIdx] = sort(t_peaks);
-    r_peaks = r_peaks(sortIdx);
+    p_peaks = p_peaks(sortIdx);
 
     t_peaks = t_peaks/10 + t_array(1);
 
-    T_half = interp1(r_peaks, t_peaks, 0.5*r_peaks(1), 'linear', 'extrap') - t_peaks(1);
-    lambda_abs = log(0.5)*c/(T_half*V0);
-
-    Period_array = zeros(length(t_peaks)-1);
-    for i = 1:length(t_peaks)-1
-        Period_i = t_peaks(i+1) - t_peaks(i);
-        Period_array(i) = Period_i;
-    end
-
-    delta_array = zeros(length(t_peaks)-1);
-    for i = 1:length(r_peaks_max)-1
-       delta_i = r_peaks_max(i+1)/r_peaks_max(i);
-       delta_array(i) = delta_i; 
-    end
-
     % Calculation period & imaginary part eta
-    Period = mean(Period_array);
-    Period = Period(1)*2;
-    eta = 2*pi*c/(Period*V0);
+    Period = t_peaks_max(2)-t_peaks_max(1);
+    eta = 2*pi/(Period);
 
     % Logarithmic decrement delta & real part xi
-    delta = mean(delta_array);
-    delta = log(delta(1));
-    xi = delta*c/(V0*Period);
+    delta = log(p_peaks_max(2)/p_peaks_max(1));
+    xi = delta/(Period);
 
-    lambda = xi + eta*1i;
+    lambda = xi + eta*1i
 end
